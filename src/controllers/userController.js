@@ -16,7 +16,7 @@ export const register = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (user) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "User already exists",
       });
@@ -51,3 +51,54 @@ export const register = async (req, res) => {
     });
   }
 };
+
+
+export const verify = async(req,res)=>{
+
+   try {
+     const authHeader = req.headers.authorization
+
+     if(!authHeader || !authHeader.startsWith("Bearer ")){
+      res.status(400).json({
+        success:false,
+        message:'Authorization token is missing or invalid'
+      })
+     }
+
+     const token = authHeader.split(" ")[1]//[Bearer, fgfjghreuigre]
+
+     let decoded
+
+     try {
+       decoded = jwt.verify(token ,process.env.SECRET_KEY)
+     } catch (error) {
+       if(error.name === "TokenExpiredError"){
+        return res.status(400).json({
+          success:false,
+          message:"the registration token has expired"
+        })
+       }
+       return res.status(400).json({
+        success:false,
+        message:"token verification failed"
+       })
+     }
+
+     const user = await User.findById(decoded.id)
+
+     if(!user){
+      return res.status(400).json({
+        success:false,
+        message:"user not found"
+      })
+
+     }
+
+    
+   } catch (error) {
+    
+   }
+
+}
+
+
