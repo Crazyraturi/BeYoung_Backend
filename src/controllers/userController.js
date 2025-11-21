@@ -1,11 +1,14 @@
 import { User } from "../models/userModel.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { verifyEmail } from "../emailVerify/verifyEmail.js";
 
 export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
     if (!firstName || !lastName || !email || !password) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "All fields are required",
       });
@@ -18,13 +21,22 @@ export const register = async (req, res) => {
         message: "User already exists",
       });
     }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({
       firstName,
       lastName,
       email,
-      password,
+      password: hashedPassword,
     });
+
+    const token = jwt.sign({ id: newUser._id }, process.env.SECRET_KEY, {
+      expiresIn: "10m",
+    });
+
+    verifyEmail(token, email); //send email here
+
+    newUser.token = token;
 
     await newUser.save();
     return res.status(201).json({
